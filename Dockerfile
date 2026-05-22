@@ -13,9 +13,12 @@ ENV CI=false
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
-# Wichtig:
-# erlaubt native build scripts automatisch
+# erlaubt build scripts
+RUN pnpm config set ignore-scripts false
+RUN pnpm config set only-built-dependencies false
 
+# WICHTIG:
+RUN pnpm install --frozen-lockfile --ignore-scripts=false
 
 # Stage 2: Build
 FROM node:22-alpine AS builder
@@ -64,7 +67,7 @@ USER nextjs
 EXPOSE 3000
 
 ENV PORT=3000
-ENV HOSTNAME=0.0.0.0
+ENV HOSTNAME="0.0.0.0"
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000 || exit 1
