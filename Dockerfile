@@ -10,15 +10,12 @@ RUN npm install -g pnpm
 COPY package.json pnpm-lock.yaml ./
 
 ENV CI=false
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
 
-# First install may fail because pnpm v10 blocks build scripts
-RUN pnpm install --frozen-lockfile || true
+# Wichtig:
+# erlaubt native build scripts automatisch
 
-# Approve native build packages
-RUN printf "a\n" | pnpm approve-builds
-
-# Install again after approval
-RUN pnpm install --frozen-lockfile
 
 # Stage 2: Build
 FROM node:22-alpine AS builder
