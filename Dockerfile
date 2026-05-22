@@ -3,16 +3,20 @@ FROM node:22-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-RUN corepack enable pnpm
+RUN npm install -g pnpm
 
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm config set ignore-scripts false && pnpm install --frozen-lockfile
+
+ENV PNPM_IGNORE_SCRIPTS=false
+RUN pnpm config set ignore-scripts false
+RUN pnpm install --frozen-lockfile --ignore-scripts=false
+RUN pnpm rebuild esbuild sharp unrs-resolver
 
 # Stage 2: Build
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-RUN corepack enable pnpm
+RUN npm install -g pnpm
 RUN addgroup --system --gid 1001 buildgroup && adduser --system --uid 1001 builduser
 RUN chown builduser:buildgroup /app
 
@@ -23,9 +27,9 @@ USER builduser
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Build-time env vars needed for Next.js prerendering
-ARG NEXT_PUBLIC_KEYGEN_API_URL=https://api.keygen.sh/v1
-ARG NEXT_PUBLIC_KEYGEN_SINGLEPLAYER=false
+ARG NEXT_PUBLIC_KEYGEN_API_URL=https://licence.recent.cloud/v1
+ARG NEXT_PUBLIC_KEYGEN_SINGLEPLAYER=true
+
 ENV NEXT_PUBLIC_KEYGEN_API_URL=$NEXT_PUBLIC_KEYGEN_API_URL
 ENV NEXT_PUBLIC_KEYGEN_SINGLEPLAYER=$NEXT_PUBLIC_KEYGEN_SINGLEPLAYER
 
