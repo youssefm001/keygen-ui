@@ -26,7 +26,10 @@ ENV NEXT_PUBLIC_KEYGEN_SINGLEPLAYER=$NEXT_PUBLIC_KEYGEN_SINGLEPLAYER
 RUN npm run build
 RUN apk add --no-cache wget
 FROM node:20-alpine AS runner
+
 WORKDIR /app
+
+RUN apk add --no-cache curl wget
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
