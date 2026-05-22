@@ -1,15 +1,18 @@
 # Stage 1: Dependencies
 FROM node:22-alpine AS deps
+
 RUN apk add --no-cache libc6-compat
+
 WORKDIR /app
 
 RUN npm install -g pnpm
 
 COPY package.json pnpm-lock.yaml ./
 
-ENV PNPM_IGNORE_SCRIPTS=false
-RUN pnpm config set ignore-scripts false
-RUN pnpm config set only-built-dependencies "esbuild sharp unrs-resolver"
+RUN echo "onlyBuiltDependencies[]=esbuild" >> .npmrc
+RUN echo "onlyBuiltDependencies[]=sharp" >> .npmrc
+RUN echo "onlyBuiltDependencies[]=unrs-resolver" >> .npmrc
+
 RUN pnpm install --frozen-lockfile
 
 # Stage 2: Build
