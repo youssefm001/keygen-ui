@@ -9,8 +9,8 @@ COPY package.json pnpm-lock.yaml ./
 
 ENV PNPM_IGNORE_SCRIPTS=false
 RUN pnpm config set ignore-scripts false
-RUN pnpm install --frozen-lockfile --ignore-scripts=false
-RUN pnpm rebuild esbuild sharp unrs-resolver
+RUN pnpm config set only-built-dependencies "esbuild sharp unrs-resolver"
+RUN pnpm install --frozen-lockfile
 
 # Stage 2: Build
 FROM node:22-alpine AS builder
