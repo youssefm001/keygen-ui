@@ -11,18 +11,22 @@ COPY package.json pnpm-lock.yaml ./
 
 ENV CI=false
 
-RUN pnpm config set onlyBuiltDependencies esbuild
-RUN pnpm config set onlyBuiltDependencies sharp
-RUN pnpm config set onlyBuiltDependencies unrs-resolver
+RUN echo "onlyBuiltDependencies[]=esbuild" >> .npmrc
+RUN echo "onlyBuiltDependencies[]=sharp" >> .npmrc
+RUN echo "onlyBuiltDependencies[]=unrs-resolver" >> .npmrc
 
 RUN pnpm install --frozen-lockfile
 
 # Stage 2: Build
 FROM node:22-alpine AS builder
+
 WORKDIR /app
 
 RUN npm install -g pnpm
-RUN addgroup --system --gid 1001 buildgroup && adduser --system --uid 1001 builduser
+
+RUN addgroup --system --gid 1001 buildgroup && \
+    adduser --system --uid 1001 builduser
+
 RUN chown builduser:buildgroup /app
 
 COPY --from=deps /app/node_modules ./node_modules
@@ -42,6 +46,7 @@ RUN pnpm build
 
 # Stage 3: Production
 FROM node:22-alpine AS runner
+
 WORKDIR /app
 
 ENV NODE_ENV=production
