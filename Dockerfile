@@ -11,10 +11,13 @@ COPY package.json pnpm-lock.yaml ./
 
 ENV CI=false
 
-RUN echo "onlyBuiltDependencies[]=esbuild" >> .npmrc
-RUN echo "onlyBuiltDependencies[]=sharp" >> .npmrc
-RUN echo "onlyBuiltDependencies[]=unrs-resolver" >> .npmrc
+# First install may fail because pnpm v10 blocks build scripts
+RUN pnpm install --frozen-lockfile || true
 
+# Approve native build packages
+RUN printf "a\n" | pnpm approve-builds
+
+# Install again after approval
 RUN pnpm install --frozen-lockfile
 
 # Stage 2: Build
@@ -64,7 +67,7 @@ USER nextjs
 EXPOSE 3000
 
 ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
+ENV HOSTNAME=0.0.0.0
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:3000 || exit 1
