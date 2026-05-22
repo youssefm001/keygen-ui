@@ -9,11 +9,11 @@ RUN npm install -g pnpm
 
 COPY package.json pnpm-lock.yaml ./
 
-RUN echo "onlyBuiltDependencies[]=esbuild" >> .npmrc
-RUN echo "onlyBuiltDependencies[]=sharp" >> .npmrc
-RUN echo "onlyBuiltDependencies[]=unrs-resolver" >> .npmrc
+ENV CI=false
+ENV PNPM_ALLOW_SCRIPTS=esbuild,sharp,unrs-resolver
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --ignore-scripts=false
+RUN pnpm rebuild esbuild sharp unrs-resolver
 
 # Stage 2: Build
 FROM node:22-alpine AS builder
