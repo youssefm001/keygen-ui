@@ -71,38 +71,25 @@ export function UserManagement() {
   const [confirmLoading, setConfirmLoading] = useState(false)
 
   const loadUsers = useCallback(async () => {
-    try {
-      setLoading(true)
+  try {
+    setLoading(true)
 
-      const allUsers: User[] = []
-      let pageNumber = 1
-      const pageSize = 100
+    const response = await api.users.list({
+      limit: 100,
+    })
 
-      while (true) {
-        const response = await api.users.list({
-          page: {
-            size: pageSize,
-            number: pageNumber,
-          },
-        })
+    console.log('Loaded users response:', response)
+    console.log('Loaded users:', response.data)
 
-        const pageUsers = response.data || []
-        allUsers.push(...pageUsers)
-
-        if (pageUsers.length < pageSize) {
-          break
-        }
-
-        pageNumber += 1
-      }
-
-      setUsers(allUsers)
-    } catch (error: unknown) {
-      handleLoadError(error, 'users')
-    } finally {
-      setLoading(false)
-    }
-  }, [api.users])
+    setUsers(response.data || [])
+  } catch (error: unknown) {
+    console.error('Failed to load users:', error)
+    handleLoadError(error, 'users')
+    setUsers([])
+  } finally {
+    setLoading(false)
+  }
+}, [api.users])
 
   useEffect(() => {
     loadUsers()
@@ -143,32 +130,25 @@ export function UserManagement() {
   }
 
   const filteredUsers = users.filter((user) => {
-    const attributes = getUserAttributes(user)
-    const query = searchTerm.toLowerCase().trim()
+  const attributes = (user.attributes || {}) as any
+  const query = searchTerm.toLowerCase().trim()
 
-    const email = String(attributes.email || '').toLowerCase()
-    const firstName = String(attributes.firstName || '').toLowerCase()
-    const lastName = String(attributes.lastName || '').toLowerCase()
-    const fullName = String(attributes.fullName || '').toLowerCase()
-    const id = String(user.id || '').toLowerCase()
+  const email = String(attributes.email || '').toLowerCase()
+  const firstName = String(attributes.firstName || '').toLowerCase()
+  const lastName = String(attributes.lastName || '').toLowerCase()
+  const fullName = String(attributes.fullName || '').toLowerCase()
+  const id = String(user.id || '').toLowerCase()
 
-    const matchesSearch =
-      !query ||
-      email.includes(query) ||
-      firstName.includes(query) ||
-      lastName.includes(query) ||
-      fullName.includes(query) ||
-      id.includes(query)
+  const matchesSearch =
+    !query ||
+    email.includes(query) ||
+    firstName.includes(query) ||
+    lastName.includes(query) ||
+    fullName.includes(query) ||
+    id.includes(query)
 
-    const banned = isBanned(user)
-
-    const matchesStatus =
-      statusFilter === 'all' ||
-      (statusFilter === 'active' && !banned) ||
-      (statusFilter === 'banned' && banned)
-
-    return matchesSearch && matchesStatus
-  })
+  return matchesSearch
+})
 
   const getStatusColor = (banned: boolean) => {
     return banned
