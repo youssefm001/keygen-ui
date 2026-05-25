@@ -151,7 +151,7 @@ export function UserManagement() {
   const isBanned = (user: User) => {
   return (user as any)?.attributes?.metadata?.banned === true
 }
-  }
+  
 
   const getStatusBadge = (banned: boolean) => {
     return banned ? (
