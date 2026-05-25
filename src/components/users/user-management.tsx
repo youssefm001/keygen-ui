@@ -97,25 +97,7 @@ export function UserManagement() {
     return user.attributes.banned === true || user.attributes.status === 'banned'
   }
 
-  const filteredUsers = users.filter((user) => {
-    const query = searchTerm.toLowerCase()
-
-    const matchesSearch =
-      !query ||
-      user.attributes.email?.toLowerCase().includes(query) ||
-      user.attributes.firstName?.toLowerCase().includes(query) ||
-      user.attributes.lastName?.toLowerCase().includes(query) ||
-      user.attributes.fullName?.toLowerCase().includes(query)
-
-    const banned = isBanned(user)
-
-    const matchesStatus =
-      statusFilter === 'all' ||
-      (statusFilter === 'active' && !banned) ||
-      (statusFilter === 'banned' && banned)
-
-    return matchesSearch && matchesStatus
-  })
+  const filteredUsers = users
 
   const getStatusColor = (banned: boolean) => {
     return banned
