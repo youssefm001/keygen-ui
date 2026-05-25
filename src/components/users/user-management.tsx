@@ -74,14 +74,29 @@ export function UserManagement() {
     try {
       setLoading(true)
 
-      const response = await api.users.list({
-        page: {
-          size: 100,
-          number: 1,
-        },
-      })
+      const allUsers: User[] = []
+      let pageNumber = 1
+      const pageSize = 100
 
-      setUsers(response.data || [])
+      while (true) {
+        const response = await api.users.list({
+          page: {
+            size: pageSize,
+            number: pageNumber,
+          },
+        })
+
+        const pageUsers = response.data || []
+        allUsers.push(...pageUsers)
+
+        if (pageUsers.length < pageSize) {
+          break
+        }
+
+        pageNumber += 1
+      }
+
+      setUsers(allUsers)
     } catch (error: unknown) {
       handleLoadError(error, 'users')
     } finally {
@@ -93,11 +108,67 @@ export function UserManagement() {
     loadUsers()
   }, [loadUsers])
 
-  const isBanned = (user: User) => {
-    return user.attributes.banned === true || user.attributes.status === 'banned'
+  const getUserAttributes = (user: User) => {
+    return (user.attributes || {}) as any
   }
 
-  const filteredUsers = users
+  const isBanned = (user: User) => {
+    const attributes = getUserAttributes(user)
+
+    return (
+      attributes.banned === true ||
+      attributes.status === 'banned' ||
+      attributes.status === 'suspended'
+    )
+  }
+
+  const getUserEmail = (user: User) => {
+    const attributes = getUserAttributes(user)
+    return attributes.email || ''
+  }
+
+  const getUserRole = (user: User) => {
+    const attributes = getUserAttributes(user)
+    return attributes.role || 'user'
+  }
+
+  const getUserCreatedDate = (user: User) => {
+    const attributes = getUserAttributes(user)
+    return attributes.created || attributes.createdAt || attributes.insertedAt || undefined
+  }
+
+  const getUserLastSignInDate = (user: User) => {
+    const attributes = getUserAttributes(user)
+    return attributes.lastSignedInAt || attributes.lastSignInAt || attributes.lastSeenAt || undefined
+  }
+
+  const filteredUsers = users.filter((user) => {
+    const attributes = getUserAttributes(user)
+    const query = searchTerm.toLowerCase().trim()
+
+    const email = String(attributes.email || '').toLowerCase()
+    const firstName = String(attributes.firstName || '').toLowerCase()
+    const lastName = String(attributes.lastName || '').toLowerCase()
+    const fullName = String(attributes.fullName || '').toLowerCase()
+    const id = String(user.id || '').toLowerCase()
+
+    const matchesSearch =
+      !query ||
+      email.includes(query) ||
+      firstName.includes(query) ||
+      lastName.includes(query) ||
+      fullName.includes(query) ||
+      id.includes(query)
+
+    const banned = isBanned(user)
+
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'active' && !banned) ||
+      (statusFilter === 'banned' && banned)
+
+    return matchesSearch && matchesStatus
+  })
 
   const getStatusColor = (banned: boolean) => {
     return banned
@@ -114,7 +185,13 @@ export function UserManagement() {
   const formatDate = (dateString?: string) => {
     if (!dateString) return 'Never'
 
-    return new Date(dateString).toLocaleDateString('en-US', {
+    const date = new Date(dateString)
+
+    if (Number.isNaN(date.getTime())) {
+      return 'Never'
+    }
+
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -142,13 +219,17 @@ export function UserManagement() {
   }
 
   const getFullName = (user: User) => {
-    if (user.attributes.fullName) return user.attributes.fullName
+    const attributes = getUserAttributes(user)
 
-    const firstName = user.attributes.firstName || ''
-    const lastName = user.attributes.lastName || ''
+    if (attributes.fullName) {
+      return attributes.fullName
+    }
+
+    const firstName = attributes.firstName || ''
+    const lastName = attributes.lastName || ''
     const fullName = `${firstName} ${lastName}`.trim()
 
-    return fullName || 'Unknown User'
+    return fullName || attributes.email || 'Unknown User'
   }
 
   const handleBanUser = (user: User) => {
@@ -207,7 +288,7 @@ export function UserManagement() {
 
   const activeUsers = users.filter((user) => !isBanned(user)).length
   const bannedUsers = users.filter((user) => isBanned(user)).length
-  const adminUsers = users.filter((user) => user.attributes.role === 'admin').length
+  const adminUsers = users.filter((user) => getUserRole(user) === 'admin').length
 
   return (
     <div className="space-y-6 px-4 lg:px-6">
@@ -323,7 +404,9 @@ export function UserManagement() {
                 </TableRow>
               ) : filteredUsers.length > 0 ? (
                 filteredUsers.map((user) => {
+                  const attributes = getUserAttributes(user)
                   const banned = isBanned(user)
+                  const email = getUserEmail(user)
 
                   return (
                     <TableRow key={user.id}>
@@ -332,9 +415,9 @@ export function UserManagement() {
                           <Avatar className="h-8 w-8">
                             <AvatarFallback>
                               {getInitials(
-                                user.attributes.firstName,
-                                user.attributes.lastName,
-                                user.attributes.email
+                                attributes.firstName,
+                                attributes.lastName,
+                                email
                               )}
                             </AvatarFallback>
                           </Avatar>
@@ -353,13 +436,13 @@ export function UserManagement() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Mail className="h-4 w-4 text-muted-foreground" />
-                          {user.attributes.email}
+                          {email || '-'}
                         </div>
                       </TableCell>
 
                       <TableCell>
                         <Badge variant="secondary">
-                          {user.attributes.role || 'user'}
+                          {getUserRole(user)}
                         </Badge>
                       </TableCell>
 
@@ -378,14 +461,12 @@ export function UserManagement() {
                       <TableCell>
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Calendar className="h-4 w-4" />
-                          {formatDate(user.attributes.created)}
+                          {formatDate(getUserCreatedDate(user))}
                         </div>
                       </TableCell>
 
                       <TableCell>
-                        {user.attributes.lastSignedInAt
-                          ? formatDate(user.attributes.lastSignedInAt)
-                          : 'Never'}
+                        {formatDate(getUserLastSignInDate(user))}
                       </TableCell>
 
                       <TableCell className="pr-6">
@@ -455,7 +536,7 @@ export function UserManagement() {
         title={pendingAction === 'unban' ? 'Unban user?' : 'Ban user?'}
         description={
           pendingUser
-            ? `${pendingAction === 'unban' ? 'Unban' : 'Ban'} ${pendingUser.attributes.email}?`
+            ? `${pendingAction === 'unban' ? 'Unban' : 'Ban'} ${getUserEmail(pendingUser) || pendingUser.id}?`
             : undefined
         }
         confirmLabel={pendingAction === 'unban' ? 'Unban' : 'Ban'}
@@ -470,7 +551,7 @@ export function UserManagement() {
         title="Delete user?"
         description={
           pendingUser
-            ? `Delete ${pendingUser.attributes.email}? This action cannot be undone.`
+            ? `Delete ${getUserEmail(pendingUser) || pendingUser.id}? This action cannot be undone.`
             : undefined
         }
         confirmLabel="Delete"
