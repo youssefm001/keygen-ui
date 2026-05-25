@@ -148,8 +148,12 @@ export function LicenseManagement() {
         }
 
         try {
-          const policyId = license.relationships?.policy?.data?.id
+const policyData = license.relationships?.policy?.data
 
+const policyId =
+  !Array.isArray(policyData) && policyData
+    ? policyData.id
+    : null
           if (policyId) {
             const policyResponse = await api.policies.get(policyId)
             policyMap[license.id] = policyResponse.data
